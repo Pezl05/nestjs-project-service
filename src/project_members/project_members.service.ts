@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateProjectMemberDto } from './dto/create-project_member.dto';
 import { UpdateProjectMemberDto } from './dto/update-project_member.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +16,17 @@ export class ProjectMembersService {
   ) {}
 
   async create(createProjectMemberDto: CreateProjectMemberDto): Promise<ProjectMember | null> {
+    const projectMembers = await this.projectMemberRepository.findOne({ 
+      where: { 
+        projectId: createProjectMemberDto.projectId,
+        userId: createProjectMemberDto.userId
+      },
+      relations: ['projectId','userId'],
+    });
+    if(projectMembers){
+      throw new BadRequestException("Member already exists");
+    }
+
     return this.projectMemberRepository.save(createProjectMemberDto);
   }
 
@@ -46,13 +57,13 @@ export class ProjectMembersService {
 
   // async findByProject(projectId: number): Promise<ProjectMember[]> {
   //   try{
-  //     const projectMembers = await this.projectMemberRepository.findAndCount({ 
-  //       where: { projectId: projectId },
-  //       relations: ['projectId','userId'],
-  //     });
-  //     if(!projectMembers){
-  //       throw new NotFoundException("Project not found");
-  //     }
+      // const projectMembers = await this.projectMemberRepository.findAndCount({ 
+      //   where: { projectId: projectId },
+      //   relations: ['projectId','userId'],
+      // });
+      // if(!projectMembers){
+      //   throw new NotFoundException("Project not found");
+      // }
 
   //     return plainToClass(ProjectMember, projectMembers);
   //   } catch(error) {
@@ -97,11 +108,12 @@ export class ProjectMembersService {
 
   async remove(projectMemberId: number) {
     try{
-      const projectMember = await this.projectMemberRepository.delete(projectMemberId);
+      const projectMember = await this.projectMemberRepository.findOneBy({ projectMemberId })
       if(!projectMember){
         throw new NotFoundException("Member not found");
       }
-
+      
+      await this.projectMemberRepository.delete(projectMemberId);
       return { message: "Delete Successful" };
     } catch(error) {
       throw error;

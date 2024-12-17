@@ -1,5 +1,4 @@
-import { IsString, IsNumber,IsOptional } from 'class-validator';
-// import { User } from '../entities/user.entity';
+import { IsString,IsOptional } from 'class-validator';
 
 export class CreateProjectDto {
     readonly projectId?: number;
@@ -7,7 +6,6 @@ export class CreateProjectDto {
     @IsString()
     name: string;
 
-    @IsNumber()
     createdBy: number;
 
     @IsString()

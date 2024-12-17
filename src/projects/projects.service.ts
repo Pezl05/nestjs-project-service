@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Request } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, IsNull, ILike, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { plainToClass } from 'class-transformer';
 
 import { Project } from './entities/project.entity';
@@ -14,7 +14,8 @@ export class ProjectsService {
     private projectsRepository: Repository<Project>,
   ) {}
 
-  async create(createProjectDto: CreateProjectDto): Promise<Project | null> {
+  async create(createProjectDto: CreateProjectDto, @Request() req): Promise<Project | null> {
+    createProjectDto.createdBy = req.user.userId;
     return this.projectsRepository.save(createProjectDto);
   }
 
@@ -25,7 +26,7 @@ export class ProjectsService {
     name: string,
     createdBy: string,
     startDate: string,
-    endDate: string,
+    endDate: string = startDate,
     status: string
   ): Promise<Project[]> {
     const whereConditions = { deletedAt: IsNull() };
@@ -34,10 +35,10 @@ export class ProjectsService {
       whereConditions['startDate'] = LessThanOrEqual(new Date(currentDate));
       whereConditions['endDate'] = MoreThanOrEqual(new Date(currentDate));
     } else{
-      if (startDate)
-        whereConditions['startDate'] = MoreThanOrEqual(new Date(startDate));
-      if (endDate)
-        whereConditions['endDate'] = LessThanOrEqual(new Date(endDate));
+      if (startDate && endDate) {
+        whereConditions['startDate'] = LessThanOrEqual(new Date(endDate));
+        whereConditions['endDate'] = MoreThanOrEqual(new Date(startDate));
+      }
     }
     if (name) 
       whereConditions['name'] = ILike(`%${name}%`);
