@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -15,8 +15,26 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(
+    @Query('offset') offset: number,
+    @Query('limit') limit: number,
+    @Query('today') today: string,
+    @Query('name') name: string,
+    @Query('createdBy') createdBy: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('status') status: string,
+  ) {
+    return this.projectsService.findAll(
+      offset,
+      limit,
+      today,
+      name,
+      createdBy,
+      startDate,
+      endDate,
+      status
+    );
   }
 
   @Get(':id')

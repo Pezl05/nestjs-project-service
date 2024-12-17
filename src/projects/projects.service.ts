@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { plainToClass } from 'class-transformer';
 
 import { Project } from './entities/project.entity';
@@ -18,10 +18,39 @@ export class ProjectsService {
     return this.projectsRepository.save(createProjectDto);
   }
 
-  async findAll(): Promise<Project[]> {
-    const projects = await this.projectsRepository.find({ 
-      where: { deletedAt: IsNull() },
+  async findAll(
+    offset: number = 0,
+    limit: number | undefined,
+    today: string,
+    name: string,
+    createdBy: string,
+    startDate: string,
+    endDate: string,
+    status: string
+  ): Promise<Project[]> {
+    const whereConditions = { deletedAt: IsNull() };
+    if (today === 'true') {
+      const currentDate = new Date();
+      whereConditions['startDate'] = LessThanOrEqual(new Date(currentDate));
+      whereConditions['endDate'] = MoreThanOrEqual(new Date(currentDate));
+    } else{
+      if (startDate)
+        whereConditions['startDate'] = MoreThanOrEqual(new Date(startDate));
+      if (endDate)
+        whereConditions['endDate'] = LessThanOrEqual(new Date(endDate));
+    }
+    if (name) 
+      whereConditions['name'] = ILike(`%${name}%`);
+    if (createdBy)
+      whereConditions['createdBy'] = createdBy;
+    if (status) 
+      whereConditions['status'] = ILike(`${status}`);
+
+    const projects = await this.projectsRepository.find({
+      where: whereConditions,
       relations: ['createdBy'],
+      skip: offset,
+      take: limit ?? undefined,
     });
 
     return plainToClass(Project, projects);
