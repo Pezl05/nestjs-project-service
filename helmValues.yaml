@@ -1,5 +1,5 @@
 replicaCount: 1
-appName: nestjs-project-service
+appName: project-service
 
 image:
   repository: harbor.pezl.local/app-test1/app1/nestjs-project-service
