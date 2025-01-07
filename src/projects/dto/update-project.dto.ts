@@ -2,7 +2,8 @@ import { IsString,IsOptional } from 'class-validator';
 
 export class UpdateProjectDto {
     @IsString()
-    name: string;
+    @IsOptional()
+    name?: string;
 
     @IsString()
     @IsOptional()
@@ -17,6 +18,9 @@ export class UpdateProjectDto {
 
     @IsOptional()
     endDate?: Date;
+
+    @IsOptional()
+    updatedAt?: Date;
 
     @IsOptional()
     deletedAt?: Date;

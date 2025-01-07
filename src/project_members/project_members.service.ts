@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateProjectMemberDto } from './dto/create-project_member.dto';
 import { UpdateProjectMemberDto } from './dto/update-project_member.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,28 +10,46 @@ import { Repository, IsNull, ILike } from 'typeorm';
 import { plainToClass } from 'class-transformer';
 
 import { ProjectMember } from './entities/project_member.entity';
-
+import { CustomLogger } from 'src/custom-logger.service';
 
 @Injectable()
 export class ProjectMembersService {
+  private readonly logger = new CustomLogger();
+
   constructor(
     @InjectRepository(ProjectMember)
     private projectMemberRepository: Repository<ProjectMember>,
   ) {}
 
-  async create(createProjectMemberDto: CreateProjectMemberDto): Promise<ProjectMember | null> {
-    const projectMembers = await this.projectMemberRepository.findOne({ 
-      where: { 
-        projectId: createProjectMemberDto.projectId,
-        userId: createProjectMemberDto.userId
-      },
-      relations: ['projectId','userId'],
-    });
-    if(projectMembers){
-      throw new BadRequestException("Member already exists");
-    }
+  async create(
+    createProjectMemberDto: CreateProjectMemberDto,
+  ): Promise<ProjectMember | null> {
+    try {
+      const projectMembers = await this.projectMemberRepository.findOne({
+        where: {
+          projectId: createProjectMemberDto.projectId,
+          userId: createProjectMemberDto.userId,
+        },
+        relations: ['projectId', 'userId'],
+      });
 
-    return this.projectMemberRepository.save(createProjectMemberDto);
+      if (projectMembers) {
+        throw new BadRequestException('Member already exists');
+      }
+
+      const newMember = await this.projectMemberRepository.save(
+        createProjectMemberDto,
+      );
+      this.logger.log(
+        `Project member with userId: ${createProjectMemberDto.userId} added successfully to projectId: ${createProjectMemberDto.projectId}.`,
+      );
+      return newMember;
+    } catch (error) {
+      this.logger.error(
+        `Error while creating project member with projectId: ${createProjectMemberDto.projectId} and userId: ${createProjectMemberDto.userId}.\nStack trace: ${error.message}\n${error.stack}`
+      );
+      throw error;
+    }
   }
 
   async findAll(
@@ -35,35 +57,37 @@ export class ProjectMembersService {
     limit: number | undefined,
     project_id: number,
     user_id: number,
-    role: string
+    role: string,
   ): Promise<ProjectMember[]> {
-    const whereConditions: any = {};
-    if (project_id) 
-      whereConditions['projectId'] = project_id;
-    if (user_id)
-      whereConditions['userId'] = user_id;
-    if (role) 
-      whereConditions['role'] = ILike(`${role}`);
+    try {
+      const whereConditions: any = {};
+      if (project_id) whereConditions['projectId'] = project_id;
+      if (user_id) whereConditions['userId'] = user_id;
+      if (role) whereConditions['role'] = ILike(`${role}`);
 
-    const projectMembers = await this.projectMemberRepository.find({
-      where: whereConditions,
-      relations: ['projectId','userId'],
-      skip: offset,
-      take: limit ?? undefined,
-    });
+      const projectMembers = await this.projectMemberRepository.find({
+        where: whereConditions,
+        relations: ['projectId', 'userId'],
+        skip: offset,
+        take: limit ?? undefined,
+      });
 
-    return plainToClass(ProjectMember, projectMembers);
+      return plainToClass(ProjectMember, projectMembers);
+    } catch (error) {
+      this.logger.error(`Error while fetching project members.\nStack trace: ${error.message}\n${error.stack}`);
+      throw error;
+    }
   }
 
   // async findByProject(projectId: number): Promise<ProjectMember[]> {
   //   try{
-      // const projectMembers = await this.projectMemberRepository.findAndCount({ 
-      //   where: { projectId: projectId },
-      //   relations: ['projectId','userId'],
-      // });
-      // if(!projectMembers){
-      //   throw new NotFoundException("Project not found");
-      // }
+  // const projectMembers = await this.projectMemberRepository.findAndCount({
+  //   where: { projectId: projectId },
+  //   relations: ['projectId','userId'],
+  // });
+  // if(!projectMembers){
+  //   throw new NotFoundException("Project not found");
+  // }
 
   //     return plainToClass(ProjectMember, projectMembers);
   //   } catch(error) {
@@ -73,7 +97,7 @@ export class ProjectMembersService {
 
   // async findByUser(userId: number): Promise<ProjectMember[]> {
   //   try{
-  //     const projectMembers = await this.projectMemberRepository.findAndCount({ 
+  //     const projectMembers = await this.projectMemberRepository.findAndCount({
   //       where: { userId: userId },
   //       relations: ['projectId','userId'],
   //     });
@@ -87,35 +111,61 @@ export class ProjectMembersService {
   //   }
   // }
 
-  async update(projectMemberId: number, updateProjectMemberDto: UpdateProjectMemberDto): Promise<ProjectMember | null> {
-    try{
-      const projectMember = await this.projectMemberRepository.findOneBy({ projectMemberId });
+  async update(
+    projectMemberId: number,
+    updateProjectMemberDto: UpdateProjectMemberDto,
+  ): Promise<ProjectMember | null> {
+    try {
+      const projectMember = await this.projectMemberRepository.findOneBy({
+        projectMemberId,
+      });
       if (!projectMember) {
+        this.logger.warn(`Project member with ID: ${projectMemberId} not found for update.`);
         throw new NotFoundException('Member not found');
       }
 
-      await this.projectMemberRepository.update(projectMemberId, updateProjectMemberDto);
-      const result = await this.projectMemberRepository.findOne({ 
-        where: { projectMemberId }, 
-        relations: ['projectId','userId']
+      await this.projectMemberRepository.update(
+        projectMemberId,
+        updateProjectMemberDto,
+      );
+
+      const result = await this.projectMemberRepository.findOne({
+        where: { projectMemberId },
+        relations: ['projectId', 'userId'],
       });
 
+      this.logger.log(
+        `Project member with userId: ${projectMember.userId} added successfully to projectId: ${projectMember.projectId}.`,
+      );
+
       return plainToClass(ProjectMember, result);
-    } catch(error) {
+    } catch (error) {
+      this.logger.error(
+        `Error while updating project member with ID: ${projectMemberId}\nStack trace: ${error.message}\n${error.stack}`,
+      );
       throw error;
     }
   }
 
   async remove(projectMemberId: number) {
-    try{
-      const projectMember = await this.projectMemberRepository.findOneBy({ projectMemberId })
-      if(!projectMember){
-        throw new NotFoundException("Member not found");
+    try {
+      const projectMember = await this.projectMemberRepository.findOneBy({
+        projectMemberId,
+      });
+
+      if (!projectMember) {
+        throw new NotFoundException('Member not found');
       }
-      
+
       await this.projectMemberRepository.delete(projectMemberId);
-      return { message: "Delete Successful" };
-    } catch(error) {
+      this.logger.log(
+        `Project member ${projectMember.userId} deleted successfully.`,
+      );
+      return { message: 'Delete Successful' };
+    } catch (error) {
+      this.logger.error(
+        `Error while deleting project member with ID: ${projectMemberId}\nStack trace: ${error.message}\n${error.stack}`,
+      );
       throw error;
     }
   }
