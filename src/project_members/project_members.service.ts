@@ -65,12 +65,15 @@ export class ProjectMembersService {
       if (user_id) whereConditions['userId'] = user_id;
       if (role) whereConditions['role'] = ILike(`${role}`);
 
-      const projectMembers = await this.projectMemberRepository.find({
-        where: whereConditions,
-        relations: ['projectId', 'userId'],
-        skip: offset,
-        take: limit ?? undefined,
-      });
+      const projectMembers = await this.projectMemberRepository
+      .createQueryBuilder('project_member')
+      .leftJoinAndSelect('project_member.userId', 'user')
+      .where(whereConditions)
+      .andWhere('user.deleted_at IS NULL')
+      .andWhere('user.userId IS NOT NULL')
+      .skip(offset)
+      .take(limit ?? undefined)
+      .getMany();
 
       return plainToClass(ProjectMember, projectMembers);
     } catch (error) {
