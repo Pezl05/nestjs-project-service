@@ -4,7 +4,7 @@ appName: project-mgmt
 image:
   repository: "harbor.pezl.local/project_mgmt/nestjs-project-service"
   tag: "latest"
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   type: ClusterIP
