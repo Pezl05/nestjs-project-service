@@ -3,9 +3,11 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { CustomLogger } from './custom-logger.service';
+import tracer from './tracer';
 // import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
+  tracer.start();
   const app = await NestFactory.create(AppModule, {
     logger: new CustomLogger(),
   });
