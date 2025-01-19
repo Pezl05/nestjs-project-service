@@ -21,4 +21,9 @@ ingress:
   paths: /api/v1/(projects|project_members)(/|$)(.*)
   pathType: ImplementationSpecific
 
+env:
+  OTEL_RESOURCE_ATTRIBUTES: "service.name=project-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-collector.observability:4318
+  OTEL_LOG_LEVEL: error
+
 existingEnv: auth-mgmt-env
